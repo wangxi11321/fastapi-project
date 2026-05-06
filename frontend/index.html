@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>沃林学生管理系统</title>
+    <link rel="stylesheet" href="/frontend/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏫 沃林学生管理系统</h1>
+            <p class="subtitle">学生信息管理平台</p>
+        </header>
+
+        <nav class="main-nav">
+            <ul>
+                <li><a href="#" onclick="showModule('dashboard')">📊 首页</a></li>
+                <li><a href="#" onclick="showModule('student')">👨‍🎓 学生管理</a></li>
+                <li><a href="#" onclick="showModule('course')">📚 课程管理</a></li>
+                <li><a href="#" onclick="showModule('score')">📝 成绩管理</a></li>
+                <li><a href="#" onclick="showModule('class')">🏠 班级管理</a></li>
+                <li><a href="#" onclick="showModule('department')">🏢 部门管理</a></li>
+                <li><a href="#" onclick="showModule('employee')">👔 员工管理</a></li>
+                <li><a href="#" onclick="showModule('employment')">💼 就业管理</a></li>
+                <li><a href="#" onclick="showModule('statistics')">📈 统计分析</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <div id="dashboard" class="module active">
+                <h2>欢迎使用沃林学生管理系统</h2>
+                <div class="stats-grid">
+                    <div class="stat-card" onclick="showModule('student')">
+                        <h3>👨‍🎓</h3>
+                        <p>学生管理</p>
+                    </div>
+                    <div class="stat-card" onclick="showModule('course')">
+                        <h3>📚</h3>
+                        <p>课程管理</p>
+                    </div>
+                    <div class="stat-card" onclick="showModule('score')">
+                        <h3>📝</h3>
+                        <p>成绩管理</p>
+                    </div>
+                    <div class="stat-card" onclick="showModule('class')">
+                        <h3>🏠</h3>
+                        <p>班级管理</p>
+                    </div>
+                    <div class="stat-card" onclick="showModule('department')">
+                        <h3>🏢</h3>
+                        <p>部门管理</p>
+                    </div>
+                    <div class="stat-card" onclick="showModule('employee')">
+                        <h3>👔</h3>
+                        <p>员工管理</p>
+                    </div>
+                    <div class="stat-card" onclick="showModule('employment')">
+                        <h3>💼</h3>
+                        <p>就业管理</p>
+                    </div>
+                    <div class="stat-card" onclick="showModule('statistics')">
+                        <h3>📈</h3>
+                        <p>统计分析</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="student" class="module">
+                <h2>👨‍🎓 学生管理</h2>
+                <div class="toolbar">
+                    <button onclick="student.showAddDialog()">➕ 新增学生</button>
+                    <button onclick="student.refresh()">🔄 刷新</button>
+                </div>
+                <div class="form-group">
+                    <input type="number" id="student-search-id" placeholder="学生ID">
+                    <input type="text" id="student-search-name" placeholder="学生姓名(模糊)">
+                    <input type="number" id="student-search-class" placeholder="班级ID">
+                    <button onclick="student.search()">🔍 搜索</button>
+                </div>
+                <div class="table-container">
+                    <table id="student-table">
+                        <thead>
+                            <tr>
+                                <th>学生ID</th>
+                                <th>姓名</th>
+                                <th>性别</th>
+                                <th>年龄</th>
+                                <th>班级ID</th>
+                                <th>专业</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="student-pagination"></div>
+            </div>
+
+            <div id="course" class="module">
+                <h2>📚 课程管理</h2>
+                <div class="toolbar">
+                    <button onclick="course.showAddDialog()">➕ 新增课程</button>
+                    <button onclick="course.refresh()">🔄 刷新</button>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="course-search-name" placeholder="课程名称(模糊)">
+                    <button onclick="course.search()">🔍 搜索</button>
+                </div>
+                <div class="table-container">
+                    <table id="course-table">
+                        <thead>
+                            <tr>
+                                <th>课程ID</th>
+                                <th>课程名称</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="course-pagination"></div>
+            </div>
+
+            <div id="score" class="module">
+                <h2>📝 成绩管理</h2>
+                <div class="toolbar">
+                    <button onclick="score.showAddDialog()">➕ 添加成绩</button>
+                    <button onclick="score.refresh()">🔄 刷新</button>
+                </div>
+                <div class="form-group">
+                    <input type="number" id="score-search-stu" placeholder="学生ID">
+                    <button onclick="score.search()">🔍 搜索</button>
+                </div>
+                <div class="table-container">
+                    <table id="score-table">
+                        <thead>
+                            <tr>
+                                <th>学生ID</th>
+                                <th>课程ID</th>
+                                <th>考试次数</th>
+                                <th>成绩</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="class" class="module">
+                <h2>🏠 班级管理</h2>
+                <div class="toolbar">
+                    <button onclick="cls.showAddDialog()">➕ 新增班级</button>
+                    <button onclick="cls.refresh()">🔄 刷新</button>
+                </div>
+                <div class="table-container">
+                    <table id="class-table">
+                        <thead>
+                            <tr>
+                                <th>班级ID</th>
+                                <th>班级名称</th>
+                                <th>班主任ID</th>
+                                <th>班级状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="department" class="module">
+                <h2>🏢 部门管理</h2>
+                <div class="toolbar">
+                    <button onclick="dept.showAddDialog()">➕ 新增部门</button>
+                    <button onclick="dept.refresh()">🔄 刷新</button>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="dept-search-name" placeholder="部门名称(模糊)">
+                    <button onclick="dept.search()">🔍 搜索</button>
+                </div>
+                <div class="table-container">
+                    <table id="dept-table">
+                        <thead>
+                            <tr>
+                                <th>部门ID</th>
+                                <th>部门名称</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="dept-pagination"></div>
+            </div>
+
+            <div id="employee" class="module">
+                <h2>👔 员工管理</h2>
+                <div class="toolbar">
+                    <button onclick="emp.showAddDialog()">➕ 新增员工</button>
+                    <button onclick="emp.refresh()">🔄 刷新</button>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="emp-search-name" placeholder="员工姓名">
+                    <button onclick="emp.search()">🔍 搜索</button>
+                </div>
+                <div class="table-container">
+                    <table id="emp-table">
+                        <thead>
+                            <tr>
+                                <th>员工ID</th>
+                                <th>姓名</th>
+                                <th>职位</th>
+                                <th>部门ID</th>
+                                <th>薪资</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="employment" class="module">
+                <h2>💼 就业信息管理</h2>
+                <div class="toolbar">
+                    <button onclick="employment.showAddDialog()">➕ 新增就业信息</button>
+                    <button onclick="employment.refresh()">🔄 刷新</button>
+                </div>
+                <div class="form-group">
+                    <input type="number" id="emp-search-stu" placeholder="学生ID">
+                    <input type="number" id="emp-search-class" placeholder="班级ID">
+                    <button onclick="employment.search()">🔍 搜索</button>
+                </div>
+                <div class="table-container">
+                    <table id="employment-table">
+                        <thead>
+                            <tr>
+                                <th>学生ID</th>
+                                <th>公司名称</th>
+                                <th>职位</th>
+                                <th>薪资</th>
+                                <th>就业时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="statistics" class="module">
+                <h2>📈 统计分析</h2>
+                <div class="stats-section">
+                    <h3>成绩统计</h3>
+                    <div class="stats-grid">
+                        <button onclick="stats.highScore()">高分学生(80+)</button>
+                        <button onclick="stats.lowScore()">低分不及格学生</button>
+                        <button onclick="stats.avgScore()">班级平均分排名</button>
+                    </div>
+                </div>
+                <div class="stats-section">
+                    <h3>课程/部门统计</h3>
+                    <div class="stats-grid">
+                        <button onclick="stats.courseCount()">课程数量</button>
+                        <button onclick="stats.courseStudents()">课程学生统计</button>
+                        <button onclick="stats.deptCount()">部门数量</button>
+                        <button onclick="stats.deptEmployees()">部门员工统计</button>
+                    </div>
+                </div>
+                <div class="stats-section">
+                    <h3>学生/班级统计</h3>
+                    <div class="stats-grid">
+                        <button onclick="stats.over30()">30岁以上学生</button>
+                        <button onclick="stats.classStat()">班级统计</button>
+                        <button onclick="stats.classCount()">班级人数统计</button>
+                        <button onclick="stats.classAvgScore()">班级平均分</button>
+                    </div>
+                </div>
+                <div class="stats-section">
+                    <h3>员工统计</h3>
+                    <div class="stats-grid">
+                        <button onclick="stats.empStats()">员工统计</button>
+                        <button onclick="stats.empPosition()">按职位统计</button>
+                    </div>
+                </div>
+                <div class="stats-section">
+                    <h3>就业统计</h3>
+                    <div class="stats-grid">
+                        <button onclick="stats.top5Salary()">薪资Top5</button>
+                        <button onclick="stats.studentDuration()">学生就业时长</button>
+                        <button onclick="stats.classAvgDuration()">班级平均就业时长</button>
+                    </div>
+                </div>
+                <div id="stats-result" class="stats-result"></div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="/frontend/js/api.js"></script>
+    <script src="/frontend/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,771 @@
+let currentModule = 'dashboard';
+
+function showModule(moduleName) {
+    document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+    document.getElementById(moduleName)?.classList.add('active');
+    currentModule = moduleName;
+    
+    const loaders = { student: () => student.refresh(), course: () => course.refresh(), 
+        score: () => score.refresh(), class: () => cls.refresh(), 
+        department: () => dept.refresh(), employee: () => emp.refresh(),
+        employment: () => employment.refresh() };
+    
+    if (loaders[moduleName]) loaders[moduleName]();
+}
+
+function showModal(content) {
+    document.getElementById('modal-body').innerHTML = content;
+    document.getElementById('modal').style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    if (event.target == document.getElementById('modal')) closeModal();
+};
+
+const student = {
+    page: 1,
+    async refresh() {
+        try {
+            const result = await StudentAPI.list(this.page);
+            this.render(result.data || result);
+            this.updatePagination(result);
+        } catch (e) {
+            this.showError(e.message);
+        }
+    },
+    updatePagination(result) {
+        const total = result.total || 0;
+        const pageSize = 10;
+        const totalPages = Math.ceil(total / pageSize);
+        const pagination = document.getElementById('student-pagination');
+        if (!pagination) return;
+        
+        let html = '';
+        const startPage = Math.max(1, this.page - 2);
+        const endPage = Math.min(totalPages, this.page + 2);
+        
+        if (this.page > 1) {
+            html += `<button onclick="student.goPage(${this.page - 1})">上一页</button>`;
+        }
+        for (let i = startPage; i <= endPage; i++) {
+            html += `<button onclick="student.goPage(${i})" class="${i === this.page ? 'active' : ''}">${i}</button>`;
+        }
+        if (this.page < totalPages) {
+            html += `<button onclick="student.goPage(${this.page + 1})">下一页</button>`;
+        }
+        pagination.innerHTML = html;
+    },
+    goPage(page) {
+        this.page = page;
+        this.refresh();
+    },
+    render(data) {
+        const tbody = document.querySelector('#student-table tbody');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7">暂无数据</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(s => `
+            <tr>
+                <td>${s.stu_id || s.stuId || '-'}</td>
+                <td>${s.stu_name || s.stuName || '-'}</td>
+                <td>${s.gender || '-'}</td>
+                <td>${s.age || '-'}</td>
+                <td>${s.class_id || s.classId || '-'}</td>
+                <td>${s.major || '-'}</td>
+                <td>
+                    <button class="view" onclick="student.view(${s.stu_id || s.stuId})">查看</button>
+                    <button class="edit" onclick="student.showEditDialog(${s.stu_id || s.stuId})">编辑</button>
+                    <button class="delete" onclick="student.delete(${s.stu_id || s.stuId})">删除</button>
+                </td>
+            </tr>
+        `).join('');
+    },
+    async search() {
+        const stuId = document.getElementById('student-search-id').value;
+        const stuName = document.getElementById('student-search-name').value;
+        const classId = document.getElementById('student-search-class').value;
+        if (!stuId) { alert('请输入学生ID'); return; }
+        try {
+            const result = await StudentAPI.search(stuId, stuName, classId);
+            this.render(result.data ? [result.data] : [result]);
+        } catch (e) { this.showError(e.message); }
+    },
+    async view(stuId) {
+        try {
+            const result = await StudentAPI.get(stuId);
+            alert(JSON.stringify(result, null, 2));
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showAddDialog() {
+        showModal(`
+            <h2>新增学生</h2>
+            <div class="form-row"><label>学生ID *</label><input type="number" id="s-stu_id" required></div>
+            <div class="form-row"><label>学生姓名 *</label><input type="text" id="s-stu_name" required></div>
+            <div class="form-row"><label>班级ID *</label><input type="number" id="s-class_id" required></div>
+            <div class="form-row"><label>性别</label><input type="text" id="s-gender"></div>
+            <div class="form-row"><label>年龄</label><input type="number" id="s-age"></div>
+            <div class="form-row"><label>专业</label><input type="text" id="s-major"></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="student.create()">提交</button>
+            </div>
+        `);
+    },
+    async create() {
+        const stuIdVal = document.getElementById('s-stu_id').value;
+        const stuNameVal = document.getElementById('s-stu_name').value;
+        const classIdVal = document.getElementById('s-class_id').value;
+        if (!stuIdVal || !stuNameVal || !classIdVal) {
+            alert('请填写必填字段');
+            return;
+        }
+        const data = {
+            stu_id: parseInt(stuIdVal),
+            stu_name: stuNameVal,
+            class_id: parseInt(classIdVal),
+            gender: document.getElementById('s-gender').value || undefined,
+            age: document.getElementById('s-age').value ? parseInt(document.getElementById('s-age').value) : undefined,
+            major: document.getElementById('s-major').value || undefined
+        };
+        try {
+            await StudentAPI.create(data);
+            alert('创建成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showEditDialog(stuId) {
+        showModal(`
+            <h2>编辑学生</h2>
+            <div class="form-row"><label>学生姓名</label><input type="text" id="e-stu_name"></div>
+            <div class="form-row"><label>性别</label><input type="text" id="e-gender"></div>
+            <div class="form-row"><label>年龄</label><input type="number" id="e-age"></div>
+            <div class="form-row"><label>专业</label><input type="text" id="e-major"></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="student.update(${stuId})">提交</button>
+            </div>
+        `);
+    },
+    async update(stuId) {
+        const data = {};
+        const name = document.getElementById('e-stu_name').value;
+        const gender = document.getElementById('e-gender').value;
+        const age = document.getElementById('e-age').value;
+        const major = document.getElementById('e-major').value;
+        if (name) data.stu_name = name;
+        if (gender) data.gender = gender;
+        if (age) data.age = parseInt(age);
+        if (major) data.major = major;
+        try {
+            await StudentAPI.update(stuId, data);
+            alert('更新成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    async delete(stuId) {
+        if (!confirm('确定要删除该学生吗？')) return;
+        try {
+            await StudentAPI.delete(stuId);
+            alert('删除成功');
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showError(msg) {
+        const tbody = document.querySelector('#student-table tbody');
+        tbody.innerHTML = `<tr><td colspan="7" class="error">${msg}</td></tr>`;
+    }
+};
+
+const course = {
+    async refresh() {
+        try {
+            const result = await CourseAPI.list();
+            this.render(result.data || []);
+        } catch (e) { this.showError(e.message); }
+    },
+    render(data) {
+        const tbody = document.querySelector('#course-table tbody');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4">暂无数据</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(c => `
+            <tr>
+                <td>${c.course_id || c.courseId || '-'}</td>
+                <td>${c.course_name || c.courseName || '-'}</td>
+                <td>${c.create_time || '-'}</td>
+                <td>
+                    <button class="edit" onclick="course.showEditDialog(${c.course_id || c.courseId})">编辑</button>
+                    <button class="delete" onclick="course.delete(${c.course_id || c.courseId})">删除</button>
+                </td>
+            </tr>
+        `).join('');
+    },
+    showAddDialog() {
+        showModal(`
+            <h2>新增课程</h2>
+            <div class="form-row"><label>课程ID *</label><input type="number" id="c-course_id" required></div>
+            <div class="form-row"><label>课程名称 *</label><input type="text" id="c-course_name" required></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="course.create()">提交</button>
+            </div>
+        `);
+    },
+    async create() {
+        const courseId = document.getElementById('c-course_id').value;
+        const courseName = document.getElementById('c-course_name').value;
+        if (!courseId || !courseName) {
+            alert('请填写必填字段');
+            return;
+        }
+        try {
+            await CourseAPI.create({ course_id: parseInt(courseId), course_name: courseName });
+            alert('创建成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showEditDialog(courseId) {
+        showModal(`
+            <h2>编辑课程</h2>
+            <div class="form-row"><label>课程名称</label><input type="text" id="e-course_name"></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="course.update(${courseId})">提交</button>
+            </div>
+        `);
+    },
+    async update(courseId) {
+        const name = document.getElementById('e-course_name').value;
+        if (!name) { alert('请填写课程名称'); return; }
+        try {
+            await CourseAPI.update(courseId, { course_name: name });
+            alert('更新成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    async delete(courseId) {
+        if (!confirm('确定要删除该课程吗？')) return;
+        try {
+            await CourseAPI.delete(courseId);
+            alert('删除成功');
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showError(msg) {
+        const tbody = document.querySelector('#course-table tbody');
+        tbody.innerHTML = `<tr><td colspan="4" class="error">${msg}</td></tr>`;
+    }
+};
+
+const score = {
+    async refresh() {
+        try {
+            const result = await ScoreAPI.list();
+            this.render(result.data || []);
+        } catch (e) { this.showError(e.message); }
+    },
+    render(data) {
+        const tbody = document.querySelector('#score-table tbody');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5">暂无数据</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(s => `
+            <tr>
+                <td>${s.stu_id || s.stuId || '-'}</td>
+                <td>${s.exam_course_id || s.courseId || '-'}</td>
+                <td>${s.test_num || s.testNum || '-'}</td>
+                <td>${s.score || '-'}</td>
+                <td>
+                    <button class="delete" onclick="score.delete('${s.stu_id}', ${s.test_num || s.testNum}, ${s.exam_course_id || s.courseId})">删除</button>
+                </td>
+            </tr>
+        `).join('');
+    },
+    showAddDialog() {
+        showModal(`
+            <h2>新增成绩</h2>
+            <div class="form-row"><label>学生ID *</label><input type="number" id="sc-stu_id" required></div>
+            <div class="form-row"><label>课程ID *</label><input type="number" id="sc-exam_course_id" required></div>
+            <div class="form-row"><label>考试次数 *</label><input type="number" id="sc-test_num" required></div>
+            <div class="form-row"><label>成绩 *</label><input type="number" id="sc-score" step="0.01" required></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="score.create()">提交</button>
+            </div>
+        `);
+    },
+    async create() {
+        const stuId = document.getElementById('sc-stu_id').value;
+        const courseId = document.getElementById('sc-exam_course_id').value;
+        const testNum = document.getElementById('sc-test_num').value;
+        const scoreVal = document.getElementById('sc-score').value;
+        if (!stuId || !courseId || !testNum || !scoreVal) {
+            alert('请填写必填字段');
+            return;
+        }
+        try {
+            await ScoreAPI.create({
+                stu_id: parseInt(stuId),
+                exam_course_id: parseInt(courseId),
+                test_num: parseInt(testNum),
+                score: parseFloat(scoreVal)
+            });
+            alert('创建成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    async delete(stuId, testNum, courseId) {
+        if (!confirm('确定要删除该成绩吗？')) return;
+        try {
+            await ScoreAPI.delete(stuId, testNum, courseId);
+            alert('删除成功');
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showError(msg) {
+        const tbody = document.querySelector('#score-table tbody');
+        tbody.innerHTML = `<tr><td colspan="5" class="error">${msg}</td></tr>`;
+    }
+};
+
+const cls = {
+    async refresh() {
+        try {
+            const result = await ClassAPI.list();
+            this.render(result.data || []);
+        } catch (e) { this.showError(e.message); }
+    },
+    render(data) {
+        const tbody = document.querySelector('#class-table tbody');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5">暂无数据</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(c => `
+            <tr>
+                <td>${c['班级id'] || c.class_id || c.classId || '-'}</td>
+                <td>${c['班级名称'] || c.class_name || c.className || '-'}</td>
+                <td>${c['班主任编号'] || c.head_teacher_id || c.teacher_id || '-'}</td>
+                <td>${c['班级状态'] || c.class_status || '正常'}</td>
+                <td>
+                    <button class="view" onclick="cls.viewStudents(${c['班级id'] || c.class_id || c.classId})">学生</button>
+                    <button class="edit" onclick="cls.showEditDialog(${c['班级id'] || c.class_id || c.classId})">编辑</button>
+                    <button class="delete" onclick="cls.delete(${c['班级id'] || c.class_id || c.classId})">删除</button>
+                </td>
+            </tr>
+        `).join('');
+    },
+    async viewStudents(classId) {
+        try {
+            const result = await ClassAPI.students(classId);
+            alert(JSON.stringify(result, null, 2));
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showAddDialog() {
+        showModal(`
+            <h2>新增班级</h2>
+            <div class="form-row"><label>班级ID *</label><input type="number" id="cl-class_id" required></div>
+            <div class="form-row"><label>班级名称 *</label><input type="text" id="cl-class_name" required></div>
+            <div class="form-row"><label>班主任ID</label><input type="number" id="cl-teacher_id"></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="cls.create()">提交</button>
+            </div>
+        `);
+    },
+    async create() {
+        const data = {
+            class_id: parseInt(document.getElementById('cl-class_id').value),
+            class_name: document.getElementById('cl-class_name').value,
+            head_teacher_id: parseInt(document.getElementById('cl-teacher_id').value) || null
+        };
+        try {
+            await ClassAPI.create(data);
+            alert('创建成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showEditDialog(classId) {
+        showModal(`
+            <h2>编辑班级</h2>
+            <div class="form-row"><label>班级名称</label><input type="text" id="e-class_name"></div>
+            <div class="form-row"><label>班主任ID</label><input type="number" id="e-teacher_id"></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="cls.update(${classId})">提交</button>
+            </div>
+        `);
+    },
+    async update(classId) {
+        const data = {};
+        const name = document.getElementById('e-class_name').value;
+        const teacher = document.getElementById('e-teacher_id').value;
+        if (name) data.class_name = name;
+        if (teacher) data.head_teacher_id = parseInt(teacher);
+        try {
+            await ClassAPI.update(classId, data);
+            alert('更新成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    async delete(classId) {
+        if (!confirm('确定要删除该班级吗？')) return;
+        try {
+            await ClassAPI.delete(classId);
+            alert('删除成功');
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showError(msg) {
+        const tbody = document.querySelector('#class-table tbody');
+        tbody.innerHTML = `<tr><td colspan="5" class="error">${msg}</td></tr>`;
+    }
+};
+
+const dept = {
+    page: 1,
+    async refresh() {
+        try {
+            const result = await DepartmentAPI.list(this.page);
+            this.render(result.data || []);
+        } catch (e) { this.showError(e.message); }
+    },
+    render(data) {
+        const tbody = document.querySelector('#dept-table tbody');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3">暂无数据</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(d => `
+            <tr>
+                <td>${d.department_id || d.departmentId || '-'}</td>
+                <td>${d.department_name || d.departmentName || '-'}</td>
+                <td>
+                    <button class="edit" onclick="dept.showEditDialog(${d.department_id || d.departmentId})">编辑</button>
+                    <button class="delete" onclick="dept.delete(${d.department_id || d.departmentId})">删除</button>
+                </td>
+            </tr>
+        `).join('');
+    },
+    showAddDialog() {
+        showModal(`
+            <h2>新增部门</h2>
+            <div class="form-row"><label>部门ID *</label><input type="number" id="d-department_id" required></div>
+            <div class="form-row"><label>部门名称 *</label><input type="text" id="d-department_name" required></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="dept.create()">提交</button>
+            </div>
+        `);
+    },
+    async create() {
+        const deptId = document.getElementById('d-department_id').value;
+        const deptName = document.getElementById('d-department_name').value;
+        if (!deptId || !deptName) {
+            alert('请填写必填字段');
+            return;
+        }
+        try {
+            await DepartmentAPI.create({ department_id: parseInt(deptId), department_name: deptName });
+            alert('创建成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showEditDialog(deptId) {
+        showModal(`
+            <h2>编辑部门</h2>
+            <div class="form-row"><label>部门名称</label><input type="text" id="e-department_name"></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="dept.update(${deptId})">提交</button>
+            </div>
+        `);
+    },
+    async update(deptId) {
+        const name = document.getElementById('e-department_name').value;
+        if (!name) { alert('请填写部门名称'); return; }
+        try {
+            await DepartmentAPI.update(deptId, { department_name: name });
+            alert('更新成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    async delete(deptId) {
+        if (!confirm('确定要删除该部门吗？')) return;
+        try {
+            await DepartmentAPI.delete(deptId);
+            alert('删除成功');
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showError(msg) {
+        const tbody = document.querySelector('#dept-table tbody');
+        tbody.innerHTML = `<tr><td colspan="3" class="error">${msg}</td></tr>`;
+    }
+};
+
+const emp = {
+    async refresh() {
+        try {
+            const result = await EmployeeAPI.list();
+            this.render(Array.isArray(result) ? result : (result.data || []));
+        } catch (e) { this.showError(e.message); }
+    },
+    render(data) {
+        const tbody = document.querySelector('#emp-table tbody');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5">暂无数据</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(e => `
+            <tr>
+                <td>${e.employee_id || e.employeeId || e.id || '-'}</td>
+                <td>${e.employee_name || e.name || '-'}</td>
+                <td>${e.position_name || e.position || '-'}</td>
+                <td>${e.department_id || e.departmentId || '-'}</td>
+                <td>
+                    <button class="edit" onclick="emp.showEditDialog(${e.employee_id || e.employeeId || e.id})">编辑</button>
+                    <button class="delete" onclick="emp.delete(${e.employee_id || e.employeeId || e.id})">删除</button>
+                </td>
+            </tr>
+        `).join('');
+    },
+    async search() {
+        const name = document.getElementById('employee-search-name').value;
+        if (!name) { alert('请输入员工姓名'); return; }
+        try {
+            const result = await EmployeeAPI.search(name);
+            this.render(result.data || [result]);
+        } catch (e) { this.showError(e.message); }
+    },
+    showAddDialog() {
+        showModal(`
+            <h2>新增员工</h2>
+            <div class="form-row"><label>员工ID *</label><input type="number" id="em-employee_id" required></div>
+            <div class="form-row"><label>姓名 *</label><input type="text" id="em-emp_name" required></div>
+            <div class="form-row"><label>职位</label><input type="text" id="em-position"></div>
+            <div class="form-row"><label>部门ID</label><input type="number" id="em-department_id"></div>
+            <div class="form-row"><label>薪资</label><input type="number" id="em-salary"></div>
+            <div class="form-row"><label>入职时间</label><input type="date" id="em-hire_time"></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="emp.create()">提交</button>
+            </div>
+        `);
+    },
+    async create() {
+        const empId = document.getElementById('em-employee_id').value;
+        const empName = document.getElementById('em-emp_name').value;
+        if (!empId || !empName) {
+            alert('请填写必填字段');
+            return;
+        }
+        const data = {
+            employee_id: parseInt(empId),
+            employee_name: empName,
+            position_name: document.getElementById('em-position').value || '',
+            department_id: document.getElementById('em-department_id').value || '1',
+            salary: document.getElementById('em-salary').value ? parseInt(document.getElementById('em-salary').value) : 0,
+            hire_time: document.getElementById('em-hire_time').value || '2025-01-01'
+        };
+        try {
+            await EmployeeAPI.create(data);
+            alert('创建成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showEditDialog(empId) {
+        showModal(`
+            <h2>编辑员工</h2>
+            <div class="form-row"><label>姓名</label><input type="text" id="e-emp_name"></div>
+            <div class="form-row"><label>职位</label><input type="text" id="e-position"></div>
+            <div class="form-row"><label>部门ID</label><input type="number" id="e-department_id"></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="emp.update(${empId})">提交</button>
+            </div>
+        `);
+    },
+    async update(empId) {
+        const data = {};
+        const name = document.getElementById('e-emp_name').value;
+        const position = document.getElementById('e-position').value;
+        const deptId = document.getElementById('e-department_id').value;
+        if (name) data.employee_name = name;
+        if (position) data.position_name = position;
+        if (deptId) data.department_id = parseInt(deptId);
+        try {
+            await EmployeeAPI.update(empId, data);
+            alert('更新成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    async delete(empId) {
+        if (!confirm('确定要删除该员工吗？')) return;
+        try {
+            await EmployeeAPI.delete(empId);
+            alert('删除成功');
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showError(msg) {
+        const tbody = document.querySelector('#emp-table tbody');
+        tbody.innerHTML = `<tr><td colspan="5" class="error">${msg}</td></tr>`;
+    }
+};
+
+const employment = {
+    async refresh() {
+        try {
+            const result = await EmploymentAPI.list();
+            this.render(Array.isArray(result) ? result : (result.data || []));
+        } catch (e) { this.showError(e.message); }
+    },
+    render(data) {
+        const tbody = document.querySelector('#employment-table tbody');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">暂无数据</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(e => `
+            <tr>
+                <td>${e.stu_id || e.stuId || '-'}</td>
+                <td>${e.class_id || e.classId || '-'}</td>
+                <td>${e.employment_status || e.status || '-'}</td>
+                <td>${e.employment_company_name || e.companyName || '-'}</td>
+                <td>${e.salary || '-'}</td>
+                <td>
+                    <button class="edit" onclick="employment.showEditDialog(${e.stu_id || e.stuId})">编辑</button>
+                    <button class="delete" onclick="employment.delete(${e.stu_id || e.stuId})">删除</button>
+                </td>
+            </tr>
+        `).join('');
+    },
+    async search() {
+        const stuId = document.getElementById('employment-search-stu').value;
+        const classId = document.getElementById('employment-search-class').value;
+        try {
+            let result;
+            if (stuId) {
+                result = await EmploymentAPI.getByStudent(stuId);
+            } else if (classId) {
+                result = await EmploymentAPI.getByClass(classId);
+            } else {
+                alert('请输入学生ID或班级ID');
+                return;
+            }
+            this.render(result.data || [result]);
+        } catch (e) { this.showError(e.message); }
+    },
+    showAddDialog() {
+        showModal(`
+            <h2>新增就业信息</h2>
+            <div class="form-row"><label>学生ID *</label><input type="number" id="em-stu_id" required></div>
+            <div class="form-row"><label>班级ID</label><input type="number" id="em-class_id"></div>
+            <div class="form-row"><label>就业状态</label><input type="text" id="em-status"></div>
+            <div class="form-row"><label>公司名称</label><input type="text" id="em-company"></div>
+            <div class="form-row"><label>薪资</label><input type="number" id="em-salary"></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="employment.create()">提交</button>
+            </div>
+        `);
+    },
+    async create() {
+        const stuId = document.getElementById('em-stu_id').value;
+        if (!stuId) {
+            alert('请填写学生ID');
+            return;
+        }
+        const data = {
+            stu_id: parseInt(stuId),
+            class_id: document.getElementById('em-class_id').value ? parseInt(document.getElementById('em-class_id').value) : undefined,
+            employment_status: document.getElementById('em-status').value || undefined,
+            employment_company_name: document.getElementById('em-company').value || undefined,
+            salary: document.getElementById('em-salary').value ? parseFloat(document.getElementById('em-salary').value) : undefined
+        };
+        try {
+            await EmploymentAPI.create(data);
+            alert('创建成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showEditDialog(stuId) {
+        showModal(`
+            <h2>编辑就业信息</h2>
+            <div class="form-row"><label>就业状态</label><input type="text" id="e-status"></div>
+            <div class="form-row"><label>公司名称</label><input type="text" id="e-company"></div>
+            <div class="form-row"><label>薪资</label><input type="number" id="e-salary"></div>
+            <div class="form-actions">
+                <button class="cancel" onclick="closeModal()">取消</button>
+                <button class="submit" onclick="employment.update(${stuId})">提交</button>
+            </div>
+        `);
+    },
+    async update(stuId) {
+        const data = {};
+        const status = document.getElementById('e-status').value;
+        const company = document.getElementById('e-company').value;
+        const salary = document.getElementById('e-salary').value;
+        if (status) data.employment_status = status;
+        if (company) data.employment_company_name = company;
+        if (salary) data.salary = parseFloat(salary);
+        try {
+            await EmploymentAPI.update(stuId, data);
+            alert('更新成功');
+            closeModal();
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    async delete(stuId) {
+        if (!confirm('确定要删除该就业信息吗？')) return;
+        try {
+            await EmploymentAPI.delete(stuId);
+            alert('删除成功');
+            this.refresh();
+        } catch (e) { alert('错误: ' + e.message); }
+    },
+    showError(msg) {
+        const tbody = document.querySelector('#employment-table tbody');
+        tbody.innerHTML = `<tr><td colspan="6" class="error">${msg}</td></tr>`;
+    }
+};
+
+function loadStats() {
+    Promise.all([
+        StatsAPI.highScore(),
+        StatsAPI.lowScore(),
+        StatsAPI.avgScore(),
+        StatsAPI.top5Salary()
+    ]).then(results => {
+        const statHigh = document.getElementById('stat-high');
+        const statLow = document.getElementById('stat-low');
+        const statAvg = document.getElementById('stat-avg');
+        const statTop5 = document.getElementById('stat-top5');
+        if (statHigh) statHigh.textContent = results[0].data?.length || 0;
+        if (statLow) statLow.textContent = results[1].data?.length || 0;
+        if (statAvg) statAvg.textContent = (results[2].data?.avg_score || 0).toFixed(1);
+        if (statTop5) statTop5.textContent = results[3].data?.length || 0;
+    }).catch(e => console.error('加载统计数据失败:', e));
+}
+
+document.addEventListener('DOMContentLoaded', loadStats);
