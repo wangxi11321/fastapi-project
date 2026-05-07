@@ -10,10 +10,12 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+*.egg-info/
 
 # 数据库文件
 *.db
 *.sqlite
+*.sqlite3
 
 # 日志文件
 *.log
@@ -33,16 +35,8 @@ Thumbs.db
 # 构建产物
 dist/
 build/
-*.egg-info/
-
-# 临时文件
-*.tmp
-*.temp
 
 # 测试报告
 htmlcov/
 .coverage
 .pytest_cache/
-
-# Docker
-docker-compose.override.yml
