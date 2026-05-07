@@ -1,5 +1,7 @@
 # 虚拟环境
 venv/
+.venv/
+env/
 .env
 .env.local
 .env.*.local
@@ -16,10 +18,11 @@ __pycache__/
 *.db
 *.sqlite
 *.sqlite3
+*.log
 
 # 日志文件
-*.log
 logs/
+*.log.*
 
 # 编辑器配置
 .vscode/
@@ -27,16 +30,58 @@ logs/
 *.swp
 *.swo
 *~
+.project
+.pydevproject
 
 # 操作系统文件
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # 构建产物
 dist/
 build/
+*.egg-info/
+.pip/
+
+# 二进制文件、库文件
+*.dll
+*.pdb
+*.lib
+*.exe
+*.so
+*.dylib
+
+# 图片文件（除非是项目文档必需的）
+images/
+*.gif
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.ico
+
+# MySQL数据库本地安装包
+mysql-*/
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*.backup
+*.swp
+*.swo
 
 # 测试报告
 htmlcov/
 .coverage
+.coverage.*
 .pytest_cache/
+.tox/
+.nox/
+
+# 文档（除非是项目必需的）
+*.md
+!README.md
+!requirements.txt
