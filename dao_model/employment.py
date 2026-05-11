@@ -10,6 +10,12 @@ from FastAPI项目.table_model.employment_info import EmploymentInfo
 # 导入schemas数据校验模型
 from FastAPI项目.pydantic_model.employment import EmploymentAdd, EmploymentUpdate
 
+# 获取所有就业信息
+def get_all_employment(db: Session):
+    result = db.query(EmploymentInfo).filter(EmploymentInfo.delete_flag == 0).all()
+    return result
+
+
 # 新增就业信息
 # db: 数据库会话
 # data: 前端传入的新增参数

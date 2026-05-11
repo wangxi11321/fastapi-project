@@ -769,3 +769,221 @@ function loadStats() {
 }
 
 document.addEventListener('DOMContentLoaded', loadStats);
+
+const stats = {
+    async highScore() {
+        try {
+            const result = await StatsAPI.highScore();
+            this.showResult('高分学生(80分以上)', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async lowScore() {
+        try {
+            const result = await StatsAPI.lowScore();
+            this.showResult('低分不及格学生', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async avgScore() {
+        try {
+            const result = await StatsAPI.avgScore();
+            this.showResult('班级平均分排名', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async courseCount() {
+        try {
+            const result = await StatsAPI.courseCount();
+            this.showResult('课程数量统计', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async courseStudents() {
+        try {
+            const result = await StatsAPI.courseStudents();
+            this.showResult('每门课程学生统计', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async deptCount() {
+        try {
+            const result = await StatsAPI.deptCount();
+            this.showResult('部门数量统计', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async deptEmployees() {
+        try {
+            const result = await StatsAPI.deptEmployees();
+            this.showResult('部门员工统计', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async over30() {
+        try {
+            const result = await StatsAPI.over30();
+            this.showResult('30岁以上学生', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async classStat() {
+        try {
+            const result = await StatsAPI.classStat();
+            this.showResult('班级统计', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async classCount() {
+        try {
+            const result = await StatsAPI.classCount();
+            this.showResult('班级人数统计', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async classAvgScore() {
+        try {
+            const result = await StatsAPI.classAvgScore();
+            this.showResult('班级平均分', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async empStats() {
+        try {
+            const result = await StatsAPI.empStats();
+            this.showResult('员工统计', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async empPosition() {
+        try {
+            const result = await StatsAPI.empPosition();
+            this.showResult('按职位统计', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async top5Salary() {
+        try {
+            const result = await StatsAPI.top5Salary();
+            this.showResult('薪资Top5', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async studentDuration() {
+        try {
+            const result = await StatsAPI.studentDuration();
+            this.showResult('学生就业时长', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    async classAvgDuration() {
+        try {
+            const result = await StatsAPI.classAvgDuration();
+            this.showResult('班级平均就业时长', result);
+        } catch (e) { this.showError(e.message); }
+    },
+    showResult(title, data) {
+        const container = document.getElementById('stats-result');
+        let html = `<h4>${title}</h4>`;
+        
+        if (!data || typeof data !== 'object') {
+            html += `<p>${data || '暂无数据'}</p>`;
+        } else if (Array.isArray(data)) {
+            html += this.arrayToTable(data);
+        } else if (data.data && Array.isArray(data.data)) {
+            html += this.arrayToTable(data.data);
+        } else {
+            html += this.objectToTable(data);
+        }
+        
+        container.innerHTML = html;
+    },
+    
+    arrayToTable(data) {
+        if (!data || data.length === 0) {
+            return '<p>暂无数据</p>';
+        }
+        
+        const keys = Object.keys(data[0]);
+        const chineseKeys = this.getChineseKeys(keys);
+        
+        let html = '<div class="stats-table-container"><table class="stats-table">';
+        html += '<thead><tr>';
+        keys.forEach(key => {
+            html += `<th>${chineseKeys[key] || key}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+        
+        data.forEach(row => {
+            html += '<tr>';
+            keys.forEach(key => {
+                const value = row[key];
+                const displayValue = this.formatValue(value);
+                html += `<td>${displayValue}</td>`;
+            });
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table></div>';
+        return html;
+    },
+    
+    objectToTable(data) {
+        let html = '<div class="stats-grid-display">';
+        
+        for (const [key, value] of Object.entries(data)) {
+            const chineseKey = this.getChineseLabel(key);
+            const displayValue = this.formatValue(value);
+            html += `
+                <div class="stats-item">
+                    <span class="stats-label">${chineseKey || key}</span>
+                    <span class="stats-value">${displayValue}</span>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        return html;
+    },
+    
+    getChineseKeys(keys) {
+        const mapping = {
+            'stu_id': '学生ID', 'stuId': '学生ID', 'student_id': '学生ID',
+            'stu_name': '姓名', 'stuName': '姓名', 'student_name': '姓名',
+            'class_id': '班级ID', 'classId': '班级ID', 'class_name': '班级名称',
+            'score': '成绩', 'avg_score': '平均分', 'average_score': '平均分',
+            'course_id': '课程ID', 'course_name': '课程名称',
+            'department_id': '部门ID', 'department_name': '部门名称',
+            'employee_id': '员工ID', 'employee_name': '员工姓名',
+            'position_name': '职位', 'salary': '薪资', 'hire_time': '入职时间',
+            'employment_status': '就业状态', 'employment_company_name': '公司名称',
+            'company_city': '公司城市', 'company_type': '公司类型', 'job_position': '岗位',
+            'gender': '性别', 'age': '年龄', 'major': '专业',
+            'total_count': '总数', 'total': '总数', 'count': '数量',
+            'male_count': '男生人数', 'female_count': '女生人数',
+            'male_ratio': '男生比例', 'female_ratio': '女生比例',
+            'employment_open_date': '就业开放日期', 'first_offer_date': '首份offer日期',
+            'get_offer_num': '拿到offer数量', 'employment_date': '就业日期',
+            'mployment_status': '就业状态', 'delete_flag': '删除标记',
+            'creation_date': '创建日期', 'insert_date': '插入日期',
+            'id': 'ID', 'name': '名称', 'value': '数值'
+        };
+        return mapping;
+    },
+    
+    getChineseLabel(key) {
+        const mapping = {
+            'total_count': '总数', 'total': '总数', 'count': '数量',
+            'avg_score': '平均分', 'average_score': '平均分',
+            'message': '提示信息', 'data': '数据',
+            'male_count': '男生人数', 'female_count': '女生人数',
+            'male_ratio': '男生比例', 'female_ratio': '女生比例',
+            'max_salary': '最高薪资', 'min_salary': '最低薪资',
+            'avg_salary': '平均薪资', 'employee_count': '员工数量'
+        };
+        return mapping[key];
+    },
+    
+    formatValue(value) {
+        if (value === null || value === undefined) return '-';
+        if (typeof value === 'number' && value % 1 !== 0) {
+            return value.toFixed(2);
+        }
+        if (typeof value === 'boolean') {
+            return value ? '是' : '否';
+        }
+        if (typeof value === 'string' && value.length > 50) {
+            return value.substring(0, 50) + '...';
+        }
+        return value;
+    },
+    showError(msg) {
+        const container = document.getElementById('stats-result');
+        container.innerHTML = `<div class="error">${msg}</div>`;
+    }
+};

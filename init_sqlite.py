@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS dim_employees (
    employee_id INTEGER, 
    employee_name TEXT, 
    position_name TEXT, 
+   salary REAL, 
    create_time TEXT, 
    department_id TEXT, 
    hire_time TEXT, 

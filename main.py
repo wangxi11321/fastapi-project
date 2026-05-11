@@ -8,9 +8,13 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from FastAPI项目.API import course,department,student,analys_api,score_info_api,classes_api,employee,employement
+from FastAPI项目.common.exception_handler import register_exception_handlers
 
 
 app = FastAPI(title="沃林学生管理系统", version="1.0.0")
+
+# 注册全局异常处理器
+register_exception_handlers(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
