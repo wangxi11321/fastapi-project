@@ -106,6 +106,8 @@ class ReportGeneratorTool:
 
     @staticmethod
     def export_to_markdown(content: str, filename: str) -> str:
+        import os
+        os.makedirs("reports", exist_ok=True)
         output_path = f"reports/{filename}.md"
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(content)
