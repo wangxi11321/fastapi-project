@@ -28,3 +28,14 @@ def update_feedback_ticket(db: Session, ticket_id: int, feedback_update: Feedbac
         db.commit()
         db.refresh(db_feedback)
     return db_feedback
+
+def get_feedback_tickets(db: Session, skip: int = 0, limit: int = 100) -> List[FeedbackTicket]:
+    return db.query(FeedbackTicket).offset(skip).limit(limit).all()
+
+def delete_feedback_ticket(db: Session, ticket_id: int) -> bool:
+    db_feedback = db.query(FeedbackTicket).filter(FeedbackTicket.id == ticket_id).first()
+    if db_feedback:
+        db.delete(db_feedback)
+        db.commit()
+        return True
+    return False

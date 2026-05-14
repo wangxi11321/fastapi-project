@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.daily_reports import DailyReport
-from app.schemas.daily_reports import DailyReportCreate
+from app.schemas.daily_reports import DailyReportCreate, DailyReportUpdate
 from datetime import date
 from typing import Optional, List
 
@@ -26,3 +26,21 @@ def get_daily_reports_by_week(db: Session, start_date: date, end_date: date) -> 
 
 def get_all_daily_reports(db: Session, skip: int = 0, limit: int = 100) -> List[DailyReport]:
     return db.query(DailyReport).offset(skip).limit(limit).all()
+
+def update_daily_report(db: Session, report_id: int, report_update: DailyReportUpdate) -> Optional[DailyReport]:
+    db_report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
+    if db_report:
+        update_data = report_update.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_report, key, value)
+        db.commit()
+        db.refresh(db_report)
+    return db_report
+
+def delete_daily_report(db: Session, report_id: int) -> bool:
+    db_report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
+    if db_report:
+        db.delete(db_report)
+        db.commit()
+        return True
+    return False

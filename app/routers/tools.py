@@ -1,121 +1,100 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import date, timedelta
 from app.core.database import get_db
-from app.services.customer_service import CustomerService
-from app.services.report_service import ReportService
-from app.services.leave_service import LeaveService
-from app.crud.feedback_tickets import create_feedback_ticket, get_feedback_tickets_by_status
-from app.crud.activities import get_activities, register_activity
-from app.schemas.intent_customers import CustomerJudgeRequest
-from app.schemas.feedback_tickets import FeedbackTicketCreate
-from typing import List, Dict, Any
+from app.schemas.section_intent_customers import IntentCustomerCreate
+from app.crud.intent_customers import create_intent_customer
+from datetime import datetime, date
+from typing import Dict, Any
 
 router = APIRouter()
 
-def get_customer_service(db: Session = Depends(get_db)) -> CustomerService:
-    return CustomerService(db)
-
-def get_report_service(db: Session = Depends(get_db)) -> ReportService:
-    return ReportService(db)
-
-def get_leave_service(db: Session = Depends(get_db)) -> LeaveService:
-    return LeaveService(db)
-
-@router.post("/judge_customer")
-def judge_customer(
-    request: CustomerJudgeRequest,
-    service: CustomerService = Depends(get_customer_service)
+@router.post("/create_customer")
+def create_customer(
+    data: Dict[str, Any],
+    db: Session = Depends(get_db)
 ):
-    result = service.judge_and_create_customer(request.customer_info)
-    return result
+    """从 Dify 接收客户信息并新增到 dify 数据库的 customer_info 表"""
 
-@router.post("/judge_and_save_customer")
-def judge_and_save_customer(
-    request: CustomerJudgeRequest,
-    service: CustomerService = Depends(get_customer_service)
-):
-    result = service.judge_and_create_customer(request.customer_info)
+    required_fields = [
+        'customer_id', 'name', 'gender', 'age', 'province', 'city',
+        'phone_number', 'channel_type', 'channel_name', 'education_level',
+        'education_status', 'school_name', 'major', 'target_country',
+        'target_project_type', 'target_major', 'target_degree',
+        'follow_status', 'assigned_consultant', 'follow_notes'
+    ]
+
+    missing_fields = [field for field in required_fields if not data.get(field)]
+    if missing_fields:
+        raise HTTPException(status_code=400, detail=f"缺少必填字段: {', '.join(missing_fields)}")
+
+    try:
+        graduate_time_str = data.get('graduate_time', '2024-01-01')
+        graduate_time = date.fromisoformat(graduate_time_str)
+    except:
+        graduate_time = date.today()
+
+    try:
+        last_follow_time_str = data.get('last_follow_time', datetime.now().isoformat())
+        last_follow_time = datetime.fromisoformat(last_follow_time_str.replace(' ', 'T'))
+    except:
+        last_follow_time = datetime.now()
+
+    customer_create = IntentCustomerCreate(
+        customer_id=data['customer_id'],
+        name=data['name'],
+        gender=data['gender'],
+        age=int(data['age']),
+        province=data['province'],
+        city=data['city'],
+        phone_number=data['phone_number'],
+        channel_type=data['channel_type'],
+        channel_name=data['channel_name'],
+        source_URL=data.get('source_URL'),
+        education_level=data['education_level'],
+        education_status=data['education_status'],
+        school_name=data['school_name'],
+        major=data['major'],
+        graduate_time=graduate_time,
+        english_score=data.get('english_score'),
+        german_level=data.get('german_level'),
+        education_verified=data.get('education_verified'),
+        target_country=data['target_country'],
+        target_project_type=data['target_project_type'],
+        target_major=data['target_major'],
+        target_degree=data['target_degree'],
+        study_purpose=data.get('study_purpose'),
+        family_income_level=data.get('family_income_level'),
+        budget_range=data.get('budget_range'),
+        loan_acceptance=data.get('loan_acceptance'),
+        payment_ability_level=data.get('payment_ability_level'),
+        accept_overseas_study=data.get('accept_overseas_study'),
+        accept_closed_training=data.get('accept_closed_training'),
+        accept_enterprise_training=data.get('accept_enterprise_training'),
+        learning_ability_score=data.get('learning_ability_score'),
+        education_upgrade_intention=data.get('education_upgrade_intention'),
+        career_upgrade_intention=data.get('career_upgrade_intention'),
+        employment_demand=data.get('employment_demand'),
+        immigration_intention=data.get('immigration_intention'),
+        overseas_development=data.get('overseas_development'),
+        high_salary_expectation=data.get('high_salary_expectation'),
+        stable_job_expectation=data.get('stable_job_expectation'),
+        passport_available=data.get('passport_available'),
+        exit_restriction_risk=data.get('exit_restriction_risk'),
+        credit_risk=data.get('credit_risk'),
+        visa_refusal_history=data.get('visa_refusal_history'),
+        high_risk_flag=data.get('high_risk_flag'),
+        consult_phase=data.get('consult_phase'),
+        follow_status=data['follow_status'],
+        assigned_consultant=data['assigned_consultant'],
+        last_follow_time=last_follow_time,
+        follow_notes=data['follow_notes']
+    )
+
+    db_customer = create_intent_customer(db=db, customer=customer_create)
+
     return {
-        "customer_created": result.get("customer_created", False),
-        "customer_id": result.get("customer_id"),
-        "judge_result": {
-            "is_target": result.get("is_target", False),
-            "reason": result.get("reason")
-        }
+        "success": True,
+        "customer_id": db_customer.id,
+        "name": db_customer.name,
+        "message": "客户信息已成功保存"
     }
-
-@router.get("/get_customers")
-def get_customers(service: CustomerService = Depends(get_customer_service)):
-    customers = service.get_customers()
-    return [{"id": c.id, "name": c.name, "phone": c.phone, "is_target": c.is_target} for c in customers]
-
-@router.post("/create_daily_report")
-def create_report_for_dify(
-    data: Dict[str, Any],
-    service: ReportService = Depends(get_report_service)
-):
-    from app.schemas.daily_reports import DailyReportCreate
-    
-    report = DailyReportCreate(
-        employee_id=data["employee_id"],
-        employee_name=data["employee_name"],
-        date=data["date"],
-        content=data["content"],
-        summary=data.get("summary"),
-        tasks_done=data.get("tasks_done"),
-        tasks_tomorrow=data.get("tasks_tomorrow"),
-        issues=data.get("issues")
-    )
-    db_report = service.create_daily_report(report)
-    return {"message": "日报创建成功", "id": db_report.id}
-
-@router.get("/daily_summary")
-def get_daily_summary_for_dify(
-    report_date: date = None,
-    service: ReportService = Depends(get_report_service)
-):
-    result = service.generate_daily_summary(report_date)
-    return {"summary": result["summary"]}
-
-@router.get("/weekly_summary")
-def get_weekly_summary_for_dify(service: ReportService = Depends(get_report_service)):
-    result = service.generate_weekly_summary()
-    return {"summary": result["summary"]}
-
-@router.post("/apply_leave")
-def apply_leave_for_dify(
-    data: Dict[str, Any],
-    service: LeaveService = Depends(get_leave_service)
-):
-    result = service.apply_leave(data)
-    return result
-
-@router.post("/submit_feedback")
-def submit_feedback_for_dify(data: Dict[str, Any], db: Session = Depends(get_db)):
-    feedback = FeedbackTicketCreate(
-        student_id=data["student_id"],
-        student_name=data["student_name"],
-        type=data["type"],
-        content=data["content"]
-    )
-    db_feedback = create_feedback_ticket(db=db, feedback=feedback)
-    return {"message": "反馈已提交", "id": db_feedback.id}
-
-@router.get("/get_activities")
-def get_activities_for_dify(db: Session = Depends(get_db)):
-    activities = get_activities(db)
-    return [{"id": a.id, "name": a.name, "type": a.type, "location": a.location, "start_date": a.start_date} for a in activities]
-
-@router.post("/register_activity")
-def register_activity_for_dify(data: Dict[str, Any], db: Session = Depends(get_db)):
-    success = register_activity(db, activity_id=data["activity_id"])
-    if success:
-        return {"message": "报名成功"}
-    else:
-        raise HTTPException(status_code=400, detail="活动已满或不存在")
-
-@router.get("/complaint_report")
-def get_complaint_report_for_dify(service: ReportService = Depends(get_report_service)):
-    result = service.generate_complaint_report()
-    return {"report": result["report"]}

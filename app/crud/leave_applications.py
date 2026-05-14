@@ -28,3 +28,14 @@ def update_leave_application(db: Session, leave_id: int, leave_update: LeaveAppl
         db.commit()
         db.refresh(db_leave)
     return db_leave
+
+def delete_leave_application(db: Session, leave_id: int) -> bool:
+    db_leave = db.query(LeaveApplication).filter(LeaveApplication.id == leave_id).first()
+    if db_leave:
+        db.delete(db_leave)
+        db.commit()
+        return True
+    return False
+
+def get_all_leave_applications(db: Session, skip: int = 0, limit: int = 100) -> List[LeaveApplication]:
+    return db.query(LeaveApplication).offset(skip).limit(limit).all()
